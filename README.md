@@ -12,4 +12,3 @@
   If you use `tfenv`, you will be asked to run a command to unlink `terraform`. Run the provided command, and then install terragrunt again.
 
 - terraform (>= v1.2.6)
-
