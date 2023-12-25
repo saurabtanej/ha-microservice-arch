@@ -41,7 +41,7 @@ generate "tflint" {
 }
 
 generate "global_locals" {
-  path              = "global_locals.tf"
+  path              = "global-locals.tf"
   if_exists         = "overwrite"
   contents          = file("./global-locals.tf")
   disable_signature = true
