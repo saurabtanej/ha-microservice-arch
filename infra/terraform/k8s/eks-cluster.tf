@@ -144,7 +144,7 @@ module "eks" {
     }
   }
 
-  tags = merge(local.common_tags, { Name = "${local.eks_cluster_name}" })
+  tags = merge(local.common_tags, { Name = local.eks_cluster_name })
 }
 
 # this is required or module will create a SG automatically with ssh open to 0.0.0.0/0 when remote_access is enabled
