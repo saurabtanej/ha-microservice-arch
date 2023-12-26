@@ -2,7 +2,7 @@
 resource "aws_eip" "nat" {
   count = 3
 
-  domain   = "vpc"
+  domain = "vpc"
 }
 
 module "aiq_vpc" {

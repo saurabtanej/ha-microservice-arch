@@ -37,7 +37,7 @@ terraform.rc
 /**/**/**/backend.tf
 /*/*/*/.tflint.hcl
 /*/*/*/.terraform-version
-*/global_locals.tf
+/*/*/*/global-locals.tf
 **/vendor/*
 
 src/terraform.tfvars.bak
