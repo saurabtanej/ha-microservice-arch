@@ -9,14 +9,14 @@ module "cluster_autoscaler_irsa_role" {
 
   oidc_providers = {
     main = {
-      provider_arn               = module.eks.oidc_provider_arn
+      provider_arn               = module.aiq_eks_cluster.oidc_provider_arn
       namespace_service_accounts = ["${local.cluster_autoscaler_namespace}:cluster-autoscaler"]
     }
   }
   tags = merge(local.common_tags, { Name = "${local.eks_cluster_name}-autoscaler-role" })
-  
+
   depends_on = [
-    module.eks
+    module.aiq_eks_cluster
   ]
 
 }
@@ -42,4 +42,7 @@ resource "helm_release" "cluster_autoscaler" {
       value = set.value["value"]
     }
   }
+  depends_on = [
+    module.cluster_autoscaler_irsa_role
+  ]
 }
