@@ -20,6 +20,5 @@ locals {
   vpc_cidr                 = "10.16.0.0/16"
   vpc_public_subnets_cidr  = ["10.16.0.0/22", "10.16.4.0/22", "10.16.8.0/22"]
   vpc_private_subnets_cidr = ["10.16.48.0/22", "10.16.52.0/22", "10.16.56.0/22"]
-  vpn_cidr_block           = "10.16.12.0/24"
   eks_cluster_name         = "aiq-${local.environment}"
 }

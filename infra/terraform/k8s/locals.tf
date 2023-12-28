@@ -67,12 +67,23 @@ locals {
         name  = "resources.limits.memory"
         value = "500Mi"
         type  = "string"
+      },
+      {
+        name = "tolerations"
+        value = [
+          {
+            key      = "node"
+            operator = "Equal"
+            value    = "infrastructure"
+            effect   = "NoSchedule"
+          }
+        ]
       }
     ]
   )
-    # Load Balancer Ingress Controller
-    enable_lb_ingress_controller = true
-    lb_ingress_set = concat(local.priorityClass,
+  # Load Balancer Ingress Controller
+  enable_lb_ingress_controller = true
+  lb_ingress_set = concat(local.priorityClass,
     [
       {
         name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
@@ -100,10 +111,21 @@ locals {
       {
         name  = "image.repository"
         value = "602401143452.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/amazon/aws-load-balancer-controller"
+      },
+      {
+        name = "tolerations"
+        value = [
+          {
+            key      = "node"
+            operator = "Equal"
+            value    = "infrastructure"
+            effect   = "NoSchedule"
+          }
+        ]
       }
     ]
   )
-  create_external_alb = true
+  create_external_alb      = true
   external_acm_certificate = "" # SSL certificate to attach to the external LB in arn format. leaving it blank for the exercise purpose
 
   # Nginx Ingress Controller
@@ -165,7 +187,34 @@ locals {
       {
         name  = "controller.electionID"
         value = "external-ingress-controller-leader"
+      },
+      {
+        name = "controller.tolerations"
+        value = [
+          {
+            key      = "node"
+            operator = "Equal"
+            value    = "infrastructure"
+            effect   = "NoSchedule"
+          }
+        ]
       }
     ]
   )
+
+  # Prometheus 
+  monitoring_namespace = "monitoring"
+  prometheus_set = [
+    {
+      name = "server.tolerations"
+      value = [
+        {
+          key      = "node"
+          operator = "Equal"
+          value    = "apps"
+          effect   = "NoSchedule"
+        }
+      ]
+    }
+  ]
 }
