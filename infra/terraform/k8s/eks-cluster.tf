@@ -174,7 +174,7 @@ resource "aws_security_group" "eks_ssh_access" {
 
 # ALB SG 
 resource "aws_security_group" "eks_external_alb" {
-  name_prefix = "${local.eks_cluster_name}-external-alb
+  name_prefix = "${local.eks_cluster_name}-external-alb"
   description = "Allow Access to Public Apps from Internet"
   vpc_id      = local.vpc_id
 
