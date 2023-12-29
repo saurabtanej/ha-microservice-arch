@@ -1,0 +1,122 @@
+# Default values for aiq-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ""
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+logging:
+  json: true
+
+deployment:
+  containerPort: "80"
+  healthCheck:
+    enabled: true
+    type: http
+    http:
+      endpoint: '/health'
+    exec:
+      command: []
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 1
+  command: []
+  args: []
+
+# -- `key: value` type environment variable to pass with k8s pods
+env: {}
+
+secretEnv: {}
+
+# -- K8s secrets
+secrets: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+# -- type of K8s service. Valid values are `ClusterIP, LoadBalancer, NodePort`
+  type: ClusterIP
+  # -- k8s service port
+  port: 80
+
+ingress:
+  - enabled: false
+    name: internal
+    annotations: {}
+      # kubernetes.io/ingress.class: external-nginx
+      # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /path
+            pathType: Prefix
+          - path: /path2
+            pathType: Prefix
+      - host: chart-example2.local
+        paths:
+          - path: /path43
+            pathType: Prefix
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+# -- enable or disable autoscaling HPA
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+nodeSelector: {}
+
+tolerations:
+  - key: "node"
+    operator: "Equal"
+    value: "apps"
+    effect: "NoSchedule"
+
+affinity: {}

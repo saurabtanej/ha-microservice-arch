@@ -1,0 +1,5 @@
+releases:
+  - name: app2
+    chart: ../../infra/helm-chart
+    values:
+      - ./app2-values.yaml

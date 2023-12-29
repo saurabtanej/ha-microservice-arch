@@ -3,7 +3,7 @@ locals {
   private_subnet_ids = data.terraform_remote_state.setup.outputs.private_subnet_ids
   public_subnet_ids  = data.terraform_remote_state.setup.outputs.public_subnet_ids
 
-  eks_public_access                    = false
+  eks_public_access                    = true
   cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
   cluster_enabled_log_types            = ["audit", "api", "authenticator"]
   eks_managed_default_disk_size        = 75

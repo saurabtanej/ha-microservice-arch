@@ -83,6 +83,10 @@ jobs:
       - name: Terraform init
         run: terragrunt init
 
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+
       - name: Terraform plan
         id: plan
         env:
