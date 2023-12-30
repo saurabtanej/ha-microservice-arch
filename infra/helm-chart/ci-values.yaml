@@ -1,0 +1,183 @@
+# Default values for aiq-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ""
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+dns: {}
+  # dnsPolicy: "None"
+  # dnsConfig:
+  #   nameservers:
+  #     - 1.2.3.4
+  #   searches:
+  #     - ns1.svc.cluster-domain.example
+  #     - my.dns.search.suffix
+  #   options:
+  #     - name: ndots
+  #       value: "2"
+  #     - name: edns0
+
+logging:
+  json: true
+
+deployment:
+  containerPort: "80"
+  healthCheck:
+    enabled: true
+    type: http
+    http:
+      endpoint: '/health'
+    exec:
+      command: []
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  command: []
+  args: []
+
+
+# -- `key: value` type environment variable to pass with k8s pods
+env: {}
+
+secretEnv: {}
+
+# -- K8s secrets
+secrets: {}
+
+# Use external secret management services like AWS Secrets Manager, Hashicorp Vault.
+# You can include secrets from several different external secrets as it receives an array
+# Documentation here - https://github.com/external-secrets/kubernetes-external-secrets
+# Given an AWS Secrets Manager secret named BankAppSecrets, that contains the following:
+# {
+#    "EMAIL_SERVICE_KEY": "673456764dfgsdfgdsfg",
+#    "RDS_DB_PASSWORD": "dhjfd7u3w3445ydf",
+#    "REDSHIFT_DB_PASSWORD": "dsfgw845try345",
+#    "BANK_SETTINGS_JSON": "{ banks: { gtb: {  \"apikey \":  \"3454rtjsdfgsdfg \",  \"host \":  \"gtb.com \" }, uba: {  \"apikey \":  \"345trsdfg2345656 \",  \"host \":  \"api.uba.com \" } }}"
+# }
+# Example:
+# externalSecrets:
+#   - backendType: secretsManager # Required. name of external secret system
+#     secretName: BankAppSecrets # Required. The name of the external secret, e.g the name of the Secret Manager secret resource on AWS
+#     # Optional role name to use to access the secret
+#     roleArn: arn:aws:es:eu-west-1:482694446005:role/production-cluster-issuing-corebanking
+#     # An array of arrays
+#     region: eu-west-1 # Required. The AWS region the region is located in
+#     data: # Optional. Specify this to pick only specific secrets, omit it to include all secrets from the external secret.
+#       - name: EMAIL_SERVICE_KEY # key in Secrets Manager, same name/key, EMAIL_SERVICE_KEY, will be used in k8s secret
+#       - name: DB_PASSWORD  # access the secret via a different name in k8s secret.
+#         property: RDS_DB_PASSWORD # the key in secrets manager
+#       - name: REDSHIFT_DB_PASSWORD # key in Secrets Manager, same name/key, REDSHIFT_DB_PASSWORD, will be used in k8s secret
+#        # below the property property is used to access elements of a key, SETTINGS_JSON, containing a JSON string
+#       - name: UBA_API_KEY # Name of the secret in k8s
+#         property: BANK_SETTINGS_JSON.banks.uba.apikey # can be a dot separated path e.g banks.uba.apikey
+#         # Other supported optional properties. Support for these is dependent on the external key store
+#         version: latest
+#         versionStage: AWSCURRENT
+#         versionId: xxxxxxx
+#         recursive: false
+#
+externalSecrets:
+  # - backendType: secretsManager
+  #   secretName: ""
+  #   roleArn: ""
+  #   region: ""
+  #   data: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+# -- type of K8s service. Valid values are `ClusterIP, LoadBalancer, NodePort`
+  type: ClusterIP
+  # -- k8s service port
+  port: 80
+
+# -- K8s service with load balancer
+loadBalancerService:
+# -- enable or disable load balancer service
+  enabled: false
+  # -- k8s service port
+  port: 80
+  annotations: {}
+  # Example annotations to create internal nlb service with static IPs
+    # service.beta.kubernetes.io/aws-load-balancer-name: service-nlb-internal
+    # service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    # service.beta.kubernetes.io/aws-load-balancer-private-ipv4-addresses: 172.31.64.11, 172.31.66.11, 172.31.65.21
+    # service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+    # service.beta.kubernetes.io/aws-load-balancer-type: nlb-ip
+
+ingress:
+  - enabled: true
+    name: internal
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /path
+            pathType: Prefix
+          - path: /path2
+            pathType: Prefix
+      - host: chart-example2.local
+        paths:
+          - path: /path43
+            pathType: Prefix
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+# -- enable or disable autoscaling HPA
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

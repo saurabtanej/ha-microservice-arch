@@ -1,0 +1,14 @@
+{{ if .Values.configMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aiq-app.fullname" . }}
+  labels:
+    {{- include "aiq-app.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade,pre-rollback,post-delete
+data:
+{{- range $key, $config := .Values.configMap }}
+  {{ $key }}: {{ $config }}
+{{ end }}
+{{ end }}

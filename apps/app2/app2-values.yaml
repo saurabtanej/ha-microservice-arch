@@ -1,0 +1,65 @@
+# Application Specific Values overrides the default value in common helm-chart in ../../helm-chart/values.yaml.
+# Modify only needed values for ex: ingress, resources, min and max values
+# Best practices values are by default in common helm-chart values.yaml file. For ex: hpa is enabled, min replica is 3, podAntiAffinity, etc
+
+image:
+  repository: ""
+  tag: ""
+
+logging:
+  json: true
+
+deployment:
+  containerPort: "80"
+  healthCheck:
+    enabled: true
+    type: http
+    http:
+      endpoint: '/health'
+
+# -- `key: value` type environment variable to pass with k8s pods
+env:
+  key1: value1
+  key2: value2
+
+service:
+# -- type of K8s service. Valid values are `ClusterIP, LoadBalancer, NodePort`
+  type: ClusterIP
+  # -- k8s service port
+  port: 80
+
+ingress:
+  - enabled: true
+    name: internal
+    annotations: {}
+      # kubernetes.io/ingress.class: external-nginx
+      # kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: app2-example.local
+        paths:
+          - path: /path
+            pathType: Prefix
+          - path: /path2
+            pathType: Prefix
+      - host: app2-example2.local
+        paths:
+          - path: /path43
+            pathType: Prefix
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2

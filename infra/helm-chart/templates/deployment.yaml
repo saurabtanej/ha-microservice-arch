@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aiq-app.fullname" . }}
+  annotations:
+    astro/owner: astro
+    reloader.stakater.com/auto: "true"
+    {{- if .Values.datadog_monitors }}
+    {{- range $monitor, $value := .Values.datadog_monitors }}
+    astro/{{ $monitor }}: app
+    {{- range $key, $value := . }}
+    astro.fairwinds.com/override.{{ $monitor }}.{{ $key }} : {{ $value | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+  labels:
+    {{- include "aiq-app.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "aiq-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.logging.json }}
+        co.elastic.logs/json.keys_under_root: "true"
+        co.elastic.logs/json.overwrite_keys: "true"
+        co.elastic.logs/json.add_error_key: "false"
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.configMap }}
+          checksum/config: {{ toString .Values.configMap | sha256sum }}
+      {{ end }}
+      labels:
+        {{- include "aiq-app.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podLabels }}
+          {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "aiq-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.deployment.command }}
+          command: {{ toYaml .Values.deployment.command | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.args }}
+          args: {{ toYaml .Values.deployment.args | nindent 12 }}
+          {{- end }}
+          envFrom:
+          {{ if .Values.secrets }}
+          - secretRef:
+              name: {{ include "aiq-app.fullname" . }}
+          {{- end }}
+          {{ if .Values.externalSecrets }}
+          {{- range $externalSecret := .Values.externalSecrets }}
+          - secretRef:
+              name: {{ printf "%s-%s" (include "aiq-app.fullname" .) $externalSecret.secretName }}-ext
+          {{- end }}
+          {{- end }}
+          env:
+    {{- range $name, $value := .Values.env }}
+    {{- if not (empty $value) }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
+    {{- range $name, $value := .Values.secretEnv }}
+    {{- if not (empty $value) }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
+    {{ if .Values.deployment.containerPort }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.deployment.containerPort }}
+              protocol: TCP
+    {{- end }}
+
+    {{- if .Values.deployment.healthCheck.enabled }}
+          livenessProbe:
+          {{- if eq .Values.deployment.healthCheck.type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .Values.deployment.healthCheck.port }}
+          {{- else if eq .Values.deployment.healthCheck.type "http" }}
+            httpGet:
+              path: {{ .Values.deployment.healthCheck.http.endpoint }}
+              port: http
+          {{- else if eq .Values.deployment.healthCheck.type "exec" }}
+            exec:
+              command: {{ .Values.deployment.healthCheck.exec.command }}
+          {{- else }}
+            {{ fail "Either http path or exec command must be specified" }}
+          {{- end }}
+            initialDelaySeconds: {{ .Values.deployment.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.deployment.healthCheck.periodSeconds }}
+            failureThreshold: {{ .Values.deployment.healthCheck.failureThreshold }}
+            timeoutSeconds: {{ .Values.deployment.healthCheck.timeoutSeconds }}
+          readinessProbe:
+          {{- if eq .Values.deployment.healthCheck.type "tcpSocket" }}
+            tcpSocket:
+              port: {{ .Values.deployment.healthCheck.port }}
+          {{- else if eq .Values.deployment.healthCheck.type "http" }}
+            httpGet:
+              path: {{ .Values.deployment.healthCheck.http.endpoint }}
+              port: http
+          {{- else if eq .Values.deployment.healthCheck.type "exec" }}
+            exec:
+              command: {{ .Values.deployment.healthCheck.exec.command }}
+          {{- else }}
+            {{ fail "Either http path or exec command must be specified" }}
+          {{- end }}
+            initialDelaySeconds: {{ .Values.deployment.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.deployment.healthCheck.periodSeconds }}
+            failureThreshold: {{ .Values.deployment.healthCheck.failureThreshold }}
+            timeoutSeconds: {{ .Values.deployment.healthCheck.timeoutSeconds }}
+    {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - {{ .Release.Name }}
+              topologyKey: kubernetes.io/hostname
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - {{ .Release.Name }}
+              topologyKey: topology.kubernetes.io/zone
+      {{- with .Values.affinity }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dns }}
+      {{- toYaml .Values.dns | nindent 6 }}
+      {{- end }}

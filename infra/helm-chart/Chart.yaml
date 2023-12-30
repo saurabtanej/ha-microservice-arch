@@ -1,0 +1,9 @@
+apiVersion: v2
+appVersion: 0.1.0
+description: A Common Helm chart for Kubernetes
+maintainers:
+- email: staneja.st@gmail.com
+  name: Saurabh
+name: aiq-app
+type: application
+version: 0.1.0
