@@ -183,7 +183,7 @@ Develop a support platform for a microservices architecture composed of a fronte
 
 ### Terratest
 
-- **Testing Framework:** Terratest[https://terratest.gruntwork.io/] is `Go` Framework and is used for infrastructure validation. All tests are created in the `test` directory
+- **Testing Framework:** Terratest[https://terratest.gruntwork.io/] is `Go` Framework and is used for infrastructure validation. All tests are created in the `test` directory. Terratest is an end to end tool, so it will create the actual infrastructure to test the configuration and destroy. For that reason, I have not included the terratest in the github workflow but left it to run manually.
 - **Test Scenarios:**
   - *VPC Test:* Validate VPC creation and configuration.
   - *EKS Test:* Validate EKS creation and configuration.
@@ -192,6 +192,9 @@ Develop a support platform for a microservices architecture composed of a fronte
   - 2. To run the tests:
   ```
   cd test
+  go mod init test
+  go get -u github.com/gruntwork-io/terratest/modules/terraform
+  go get github.com/gruntwork-io/terratest/modules/aws@v0.46.8
   go test -v run eks_cluster_test.go > output.md
   ```
 
@@ -215,6 +218,12 @@ Develop a support platform for a microservices architecture composed of a fronte
 - Prometheus is pull based monitoring tool.
 - With Prometheus, we can also capture custom metrics specific to the applications. We can also add varios prometheus exporter for better visibility around the system.
 - Grafana[https://grafana.com/docs/] is also an open source Cloud Native for better visiulization of your system and application insights. 
+
+
+## Future Improvements
+
+- Add more tests for eks cluster and aurora cluster.
+- Integrate ArgoCD for application deployment and make use of argo rollout for canary deployment to reduce the blast radious.
 
 ## Contact
 

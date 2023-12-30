@@ -1,30 +1,64 @@
 package test
 
 import (
+	"encoding/base64"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"testing"
-	"time"
 
-	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/eks"
 )
 
+func newClientset(cluster *eks.Cluster) (*kubernetes.Clientset, error) {
+	gen, err := token.NewGenerator(true, false)
+	if err != nil {
+		return nil, err
+	}
+	opts := &token.GetTokenOptions{
+		ClusterID: aws.StringValue(cluster.Name),
+	}
+	tok, err := gen.GetWithOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	ca, err := base64.StdEncoding.DecodeString(aws.StringValue(cluster.CertificateAuthority.Data))
+	if err != nil {
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(
+		&rest.Config{
+			Host:        aws.StringValue(cluster.Endpoint),
+			BearerToken: tok.Token,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData: ca,
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
+// Test EKS using Terratest.
 func TestEksCluster(t *testing.T) {
-	t.Parallel()
 
-	// Pick a random AWS region to test in. This helps ensure your code works in all regions.
-	awsRegion := aws.GetRandomStableRegion(t, nil, nil)
-
-	// Set the Terraform options
-	terraformOptions := &terraform.Options{
-		// Set the path to your Terraform code that will be tested.
-		TerraformDir: "./infra/terraform/k8s",
+	// Construct the terraform options
+	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+		TerraformDir: "../infra/terraform/k8s",
 
 		// Variables to pass to our Terraform configuration using -var options
 		Vars: map[string]interface{}{
-			"cluster_name":                         "aiq-production",
-			"eks_cluster_name":                     "aiq-production",
-			"eks_public_access":                    true,
+			"cluster_name":                         "example-cluster",
+			"eks_cluster_name":                     "example-eks-cluster",
+			"eks_public_access":                    false,
 			"cluster_endpoint_public_access_cidrs": []string{"0.0.0.0/0"},
 			// Add other variables from locals.tf here
 			"eks_managed_default_disk_size": 75,
@@ -33,37 +67,26 @@ func TestEksCluster(t *testing.T) {
 			"default_node_group_max":        10,
 			// Add more variables as needed
 		},
+	})
 
-		// Variables to pass to our Terraform configuration using environment variables
-		EnvVars: map[string]string{
-			"TERRAFORM_VAR_AWS_REGION": awsRegion,
-			// Add any other environment variables needed
-		},
-
-		// Retry up to 3 times with a sleep between retries of 5 seconds
-		MaxRetries:         3,
-		TimeBetweenRetries: 5 * time.Second,
-	}
-
-	// Defer the destroy until the tests have run
+	// At the end of the test, run `terraform destroy` to clean up any resources that were created
 	defer terraform.Destroy(t, terraformOptions)
 
-	// Run terraform init and apply. Fail the test if there are any errors.
+	// If Go runtime crushes, run `terraform destroy` to clean up any resources that were created
+	defer runtime.HandleCrash(func(i interface{}) {
+		terraform.Destroy(t, terraformOptions)
+	})
+
+	// This will run `terraform init` and `terraform apply` and fail the test if there are any errors
 	terraform.InitAndApply(t, terraformOptions)
 
-	// Validate the EKS cluster
-	validateEksCluster(t, terraformOptions)
-}
+	// Run `terraform output` to get the value of an output variable
+	eksClusterId := terraform.Output(t, terraformOptions, "eks_cluster_id")
+	// Verify we're getting back the outputs we expect
+	assert.Equal(t, "example-cluster", eksClusterId)
 
-func validateEksCluster(t *testing.T, terraformOptions *terraform.Options) {
-	// Example validation: Check if the EKS cluster exists
-	clusterName := terraform.Output(t, terraformOptions, "eks_cluster_name")
-	region := terraform.Output(t, terraformOptions, "aws_region")
-
-	eksCluster := aws.GetEksCluster(t, region, clusterName)
-
-	// Add more validation as needed based on your use case
-	assert.True(t, eksCluster.Created, "EKS cluster does not exist")
-	assert.Equal(t, clusterName, eksCluster.Name, "EKS cluster name is incorrect")
-	// Add more assertions as needed
+	// Run `terraform output` to get the value of an output variable
+	eksNodeGroupStatus := terraform.Output(t, terraformOptions, "eks_node_group_status")
+	// Verify we're getting back the outputs we expect
+	assert.Equal(t, "ACTIVE", eksNodeGroupStatus)
 }

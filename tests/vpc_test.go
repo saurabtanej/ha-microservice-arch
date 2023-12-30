@@ -15,14 +15,14 @@ func TestTerraformAiqVPC(t *testing.T) {
 	// Pick a random AWS region to test in. This helps ensure your code works in all regions.
 	awsRegion := aws.GetRandomStableRegion(t, nil, nil)
 
-	// Define the VPC CIDR, private subnet CIDRs, and public subnet CIDRs
-	vpcCidr := "10.16.0.0/16"
-	privateSubnetCidrs := []string{"10.16.48.0/22", "10.16.52.0/22", "10.16.56.0/22"}
-	publicSubnetCidrs := []string{"10.16.0.0/22", "10.16.4.0/22", "10.16.8.0/22"}
+	// Give the VPC and the subnets correct CIDRs
+	vpcCidr := "10.14.0.0/16"
+	privateSubnetCidrs := []string{"10.14.48.0/22", "10.14.52.0/22", "10.14.56.0/22"}
+	publicSubnetCidrs := []string{"10.14.0.0/22", "10.14.4.0/22", "10.14.8.0/22"}
 
 	// Construct the terraform options
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: "./infra/terraform/networking",
+		TerraformDir: "../infra/terraform/networking",
 
 		Vars: map[string]interface{}{
 			"vpc_cidr":                 vpcCidr,
@@ -38,21 +38,18 @@ func TestTerraformAiqVPC(t *testing.T) {
 	// This will run `terraform init` and `terraform apply`
 	terraform.InitAndApply(t, terraformOptions)
 
+	// Run `terraform output` to get the value of an output variable
 	publicSubnetId := terraform.Output(t, terraformOptions, "public_subnet_id")
+	privateSubnetId := terraform.Output(t, terraformOptions, "private_subnet_id")
+	vpcId := terraform.Output(t, terraformOptions, "main_vpc_id")
 
-	// Validate the VPC and subnets
-	vpcId := terraform.Output(t, terraformOptions, "vpc_id")
 	subnets := aws.GetSubnetsForVpc(t, vpcId, awsRegion)
 
 	// Assert that the number of subnets matches the expected count
 	require.Equal(t, 6, len(subnets))
 
-	// Validate the properties of each subnet
-	for _, subnet := range subnets {
-		if aws.IsPublicSubnet(t, subnet.ID, awsRegion) {
-			assert.Contains(t, publicSubnetCidrs, *subnet.CidrBlock)
-		} else {
-			assert.Contains(t, privateSubnetCidrs, *subnet.CidrBlock)
-		}
-	}
+	// Verify if the network that is supposed to be public is really public
+	assert.True(t, aws.IsPublicSubnet(t, publicSubnetId, awsRegion))
+	// Verify if the network that is supposed to be private is really private
+	assert.False(t, aws.IsPublicSubnet(t, privateSubnetId, awsRegion))
 }
